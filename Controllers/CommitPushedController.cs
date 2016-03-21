@@ -39,8 +39,8 @@ namespace RepoOrchestrator.Controllers
                                 {
                                     queueBuildTasks.Add(
                                         _vsoService.QueueBuildAsync(
-                                            registration.VsoInstance, 
-                                            registration.VsoProject, 
+                                            registration.VsoInstance,
+                                            registration.VsoProject,
                                             registration.BuildDefinitionId));
                                 }
 

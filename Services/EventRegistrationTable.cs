@@ -27,9 +27,7 @@ namespace RepoOrchestrator.Services
         {
             return _subscriptionsTable.CreateQuery<RepoSubscription>()
                 .Where(s => s.PartitionKey == SubscriptionPartitionKey &&
-                    s.RepoPath == indexModel.RepoPath &&
-                    s.BranchPath == indexModel.BranchPath &&
-                    s.IndexType == indexModel.IndexType)
+                    s.IndexFullPath == indexModel.FullPath)
                 .Select(s => new EventRegistration()
                 {
                     Index = indexModel,
@@ -45,9 +43,7 @@ namespace RepoOrchestrator.Services
             {
             }
 
-            public string RepoPath { get; set; }
-            public string BranchPath { get; set; }
-            public string IndexType { get; set; }
+            public string IndexFullPath { get; set; }
 
             public string VsoInstance { get; set; }
             public string VsoProject { get; set; }

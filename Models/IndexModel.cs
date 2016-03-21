@@ -6,28 +6,32 @@ namespace RepoOrchestrator.Models
 {
     public class IndexModel
     {
-        public string RepoPath { get; set; }
-        public string BranchPath { get; set; }
+        public string FullPath { get; set; }
+        public string Owner { get; set; }
+        public string Repo { get; set; }
+        public string Branch { get; set; }
         public string IndexType { get; set; }
 
-        public static bool TryParse(string filePath, out IndexModel model)
+        public static bool TryParse(string fullPath, out IndexModel model)
         {
             // the IndexModel path goes like the following:
-            // <repo>/<branch>/<IndexType>.txt
+            // <owner>/<repo>/<branch>/<IndexType>.txt
 
             model = null;
 
-            string[] segments = filePath.Split(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
-            if (segments.Count() < 3)
+            string[] segments = fullPath.Split(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+            if (segments.Count() < 4)
             {
-                Trace.TraceWarning($"Invalid IndexModel - Not enough segments '{filePath}'");
+                Trace.TraceWarning($"Invalid IndexModel - Not enough segments '{fullPath}'");
                 return false;
             }
 
             model = new IndexModel()
             {
-                RepoPath = segments[0],
-                BranchPath = string.Join(Path.AltDirectorySeparatorChar.ToString(), segments.Skip(1).Take(segments.Length - 2)),
+                FullPath = fullPath,
+                Owner = segments[0],
+                Repo = segments[1],
+                Branch = string.Join(Path.AltDirectorySeparatorChar.ToString(), segments.Skip(2).Take(segments.Length - 3)),
                 IndexType = Path.GetFileNameWithoutExtension(segments.Last()),
             };
 
