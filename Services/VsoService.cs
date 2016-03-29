@@ -2,9 +2,11 @@
 using System.Configuration;
 using System.Diagnostics;
 using System.Net.Http;
+using System.Net.Http.Formatting;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Serialization;
 
 namespace RepoOrchestrator.Services
 {
@@ -21,28 +23,42 @@ namespace RepoOrchestrator.Services
                        string.Format("{0}:{1}", ConfigurationManager.AppSettings["VsoUser"], ConfigurationManager.AppSettings["VsoPassword"]))));
         }
 
-        public async Task QueueBuildAsync(string instance, string project, string buildDefinitionId)
+        public async Task QueueBuildAsync(string instance, string project, int buildDefinitionId, string parameters)
         {
             string queueBuildUrl = $"https://{instance}/defaultcollection/{project}/_apis/build/builds?api-version={apiVersion}";
 
-            string queueBuildBody = @"{
-    ""definition"": {
-        ""id"": " + buildDefinitionId + @"
-    }
-}";
+            Build build = new Build()
+            {
+                Definition = new BuildDefinitionRef() { Id = buildDefinitionId },
+                Parameters = parameters
+            };
 
-            StringContent queueBuildContent = new StringContent(queueBuildBody);
-            queueBuildContent.Headers.ContentType.MediaType = "application/json";
+            JsonMediaTypeFormatter formatter = new JsonMediaTypeFormatter();
+            formatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
+
+            ObjectContent queueBuildContent = new ObjectContent<Build>(build, formatter);
 
             HttpResponseMessage response = await client.PostAsync(queueBuildUrl, queueBuildContent);
             if (!response.IsSuccessStatusCode)
             {
-                Trace.TraceError($"Error queuing VSO build to '{queueBuildUrl}'\nBody: {queueBuildBody}\n\nResponse StatusCode: {response.StatusCode}\nResponse Body: {await response.Content.ReadAsStringAsync()}");
+                Trace.TraceError($"Error queuing VSO build to '{queueBuildUrl}'\nBody: {await queueBuildContent.ReadAsStringAsync()}\n\nResponse StatusCode: {response.StatusCode}\nResponse Body: {await response.Content.ReadAsStringAsync()}");
             }
             else
             {
                 Trace.TraceInformation($"Successfully queued VSO build.{Environment.NewLine}Response Body: {await response.Content.ReadAsStringAsync()}");
             }
+        }
+
+        private class Build
+        {
+            public BuildDefinitionRef Definition { get; set; }
+
+            public string Parameters { get; set; }
+        }
+
+        private class BuildDefinitionRef
+        {
+            public int Id { get; set; }
         }
     }
 }

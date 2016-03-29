@@ -1,53 +1,143 @@
-﻿using System.Collections.Generic;
-using System.Configuration;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Table;
+using System.Net.Http;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using RepoOrchestrator.Models;
 
 namespace RepoOrchestrator.Services
 {
     public class EventRegistrationTable
     {
-        private const string SubscriptionPartitionKey = "Subscriptions";
+        private static HttpClient s_client = new HttpClient();
 
-        private CloudTable _subscriptionsTable;
+        private SubscriptionsModel SubscriptionModel { get; set; }
 
-        public EventRegistrationTable()
+        public async Task<IEnumerable<EventRegistration>> GetRegistrations(ModifiedFileModel modifiedFile)
         {
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(
-                ConfigurationManager.AppSettings["EventSubscriptionsConnectionString"]);
-
-            CloudTableClient tableClient = storageAccount.CreateCloudTableClient();
-
-            _subscriptionsTable = tableClient.GetTableReference("RepoSubscriptions");
-        }
-
-        public IEnumerable<EventRegistration> GetRegistrations(IndexModel indexModel)
-        {
-            return _subscriptionsTable.CreateQuery<RepoSubscription>()
-                .Where(s => s.PartitionKey == SubscriptionPartitionKey &&
-                    s.IndexFullPath == indexModel.FullPath)
-                .Select(s => new EventRegistration()
-                {
-                    Index = indexModel,
-                    VsoInstance = s.VsoInstance,
-                    VsoProject = s.VsoProject,
-                    BuildDefinitionId = s.BuildDefinitionId,
-                });
-        }
-
-        private class RepoSubscription : TableEntity
-        {
-            public RepoSubscription()
+            if (SubscriptionModel == null)
             {
+                await InitializeSubscriptionModel();
             }
 
-            public string IndexFullPath { get; set; }
+            return SubscriptionModel.GetRegistrations(modifiedFile);
+        }
 
-            public string VsoInstance { get; set; }
+        private async Task InitializeSubscriptionModel()
+        {
+            // TODO: get this URL from settings
+            string subscriptionsString = await s_client.GetStringAsync("https://raw.githubusercontent.com/eerhardt/versions/master/Subscriptions.json");
+
+            SubscriptionModel = JsonConvert.DeserializeObject<SubscriptionsModel>(subscriptionsString);
+        }
+
+        private class SubscriptionsModel
+        {
+            public BuildDefinitionList NamedVsoBuildDefinitions { get; set; }
+            public SubscriptionList Subscriptions { get; set; }
+
+            public IEnumerable<EventRegistration> GetRegistrations(ModifiedFileModel modifiedFile)
+            {
+                List<EventRegistration> registrations = new List<EventRegistration>();
+
+                foreach (Subscription subscription in Subscriptions.GetSubscriptions(modifiedFile))
+                {
+                    BuildDefinition buildDefinition = GetBuildDefinition(subscription);
+                    string parameters = VsoParameterGenerator.GetParameters(subscription.VsoParameters);
+
+                    registrations.Add(new EventRegistration()
+                    {
+                        VsoInstance = buildDefinition.VsoInstance,
+                        VsoProject = buildDefinition.VsoProject,
+                        BuildDefinitionId = buildDefinition.BuildDefinitionId,
+                        VsoParameters = parameters
+                    });
+                }
+
+                return registrations;
+            }
+
+            private BuildDefinition GetBuildDefinition(Subscription subscription)
+            {
+                // first look to see if there is a NamedVsoBuildDefinition property and a
+                // valid VsoBuildDefinition with that name
+                BuildDefinition buildDefinition = NamedVsoBuildDefinitions.GetBuildDefinition(subscription);
+
+                // if that doesn't exist, get the BuildDefinition from the properties directly
+                if (buildDefinition == null)
+                {
+                    buildDefinition = new BuildDefinition()
+                    {
+                        VsoInstance = subscription.VsoInstance,
+                        VsoProject = subscription.VsoProject,
+                        BuildDefinitionId = subscription.BuildDefinitionId,
+                    };
+                }
+
+                return buildDefinition;
+            }
+        }
+
+        private class SubscriptionList
+        {
+            [JsonExtensionData]
+            private IDictionary<string, JToken> _subscribedFiles = null;
+
+            public IEnumerable<Subscription> GetSubscriptions(ModifiedFileModel modifiedFile)
+            {
+                foreach (string fileName in _subscribedFiles.Keys)
+                {
+                    if (string.Equals(fileName, modifiedFile.FullPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return JsonConvert.DeserializeObject<Subscription[]>(_subscribedFiles[fileName].ToString());
+                    }
+                }
+
+                return Enumerable.Empty<Subscription>();
+            }
+        }
+
+        private class Subscription
+        {
+            public string NamedVsoBuildDefinition { get; set; }
+
             public string VsoProject { get; set; }
-            public string BuildDefinitionId { get; set; }
+            public string VsoInstance { get; set; }
+            public int BuildDefinitionId { get; set; }
+
+            [JsonExtensionData]
+            public IDictionary<string, JToken> VsoParameters = null;  // TODO: do properties work?
+        }
+
+        private class BuildDefinitionList
+        {
+            [JsonExtensionData]
+            private IDictionary<string, JToken> _buildNames = null;
+
+            public BuildDefinition GetBuildDefinition(Subscription subscription)
+            {
+                BuildDefinition buildDefinition = null;
+
+                if (!string.IsNullOrEmpty(subscription.NamedVsoBuildDefinition))
+                {
+                    JToken token;
+                    if (_buildNames.TryGetValue(subscription.NamedVsoBuildDefinition, out token))
+                    {
+                        buildDefinition = JsonConvert.DeserializeObject<BuildDefinition>(token.ToString());
+                    }
+                }
+
+                return buildDefinition;
+            }
+        }
+
+        private class BuildDefinition
+        {
+            public string VsoProject { get; set; }
+            public string VsoInstance { get; set; }
+            public int BuildDefinitionId { get; set; }
         }
     }
 }

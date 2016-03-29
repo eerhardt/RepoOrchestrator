@@ -19,29 +19,30 @@ namespace RepoOrchestrator.Controllers
 
             try
             {
-                if (e.commits != null)
+                if (e.Commits != null)
                 {
-                    foreach (Commit c in e.commits)
+                    foreach (Commit c in e.Commits)
                     {
                         if (c.modified != null)
                         {
                             foreach (string modified in c.modified)
                             {
-                                IndexModel indexModel;
-                                if (!IndexModel.TryParse(modified, out indexModel))
+                                ModifiedFileModel modifiedFile;
+                                if (!ModifiedFileModel.TryParse(e.Repository.Full_Name, e.Ref, modified, out modifiedFile))
                                 {
                                     Trace.TraceWarning($"Skipping file '{modified}'");
                                     continue;
                                 }
 
                                 List<Task> queueBuildTasks = new List<Task>();
-                                foreach (EventRegistration registration in _eventService.GetRegistrations(indexModel))
+                                foreach (EventRegistration registration in await _eventService.GetRegistrations(modifiedFile))
                                 {
                                     queueBuildTasks.Add(
                                         _vsoService.QueueBuildAsync(
                                             registration.VsoInstance,
                                             registration.VsoProject,
-                                            registration.BuildDefinitionId));
+                                            registration.BuildDefinitionId,
+                                            registration.VsoParameters));
                                 }
 
                                 await Task.WhenAll(queueBuildTasks);
