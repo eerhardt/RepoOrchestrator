@@ -83,15 +83,15 @@ namespace RepoOrchestrator.Services
         private class SubscriptionList
         {
             [JsonExtensionData]
-            private IDictionary<string, JToken> _subscribedFiles = null;
+            private IDictionary<string, JToken> SubscribedFiles { get; set; }
 
             public IEnumerable<Subscription> GetSubscriptions(ModifiedFileModel modifiedFile)
             {
-                foreach (string fileName in _subscribedFiles.Keys)
+                foreach (string fileName in SubscribedFiles.Keys)
                 {
                     if (string.Equals(fileName, modifiedFile.FullPath, StringComparison.OrdinalIgnoreCase))
                     {
-                        return JsonConvert.DeserializeObject<Subscription[]>(_subscribedFiles[fileName].ToString());
+                        return JsonConvert.DeserializeObject<Subscription[]>(SubscribedFiles[fileName].ToString());
                     }
                 }
 
@@ -108,13 +108,13 @@ namespace RepoOrchestrator.Services
             public int BuildDefinitionId { get; set; }
 
             [JsonExtensionData]
-            public IDictionary<string, JToken> VsoParameters = null;  // TODO: do properties work?
+            public IDictionary<string, JToken> VsoParameters { get; set; }
         }
 
         private class BuildDefinitionList
         {
             [JsonExtensionData]
-            private IDictionary<string, JToken> _buildNames = null;
+            private IDictionary<string, JToken> BuildNames { get; set; }
 
             public BuildDefinition GetBuildDefinition(Subscription subscription)
             {
@@ -123,7 +123,7 @@ namespace RepoOrchestrator.Services
                 if (!string.IsNullOrEmpty(subscription.NamedVsoBuildDefinition))
                 {
                     JToken token;
-                    if (_buildNames.TryGetValue(subscription.NamedVsoBuildDefinition, out token))
+                    if (BuildNames.TryGetValue(subscription.NamedVsoBuildDefinition, out token))
                     {
                         buildDefinition = JsonConvert.DeserializeObject<BuildDefinition>(token.ToString());
                     }
