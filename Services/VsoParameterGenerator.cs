@@ -1,6 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Newtonsoft.Json.Linq;
 
 namespace RepoOrchestrator.Services
@@ -14,33 +13,18 @@ namespace RepoOrchestrator.Services
                 return null;
             }
 
-            StringBuilder builder = new StringBuilder("{");
-            bool firstTime = true;
+            JObject parameterObject = new JObject();
             foreach (KeyValuePair<string, JToken> parameter in vsoParameters)
             {
                 string value = GetValueString(parameter.Value);
 
-                if (firstTime)
-                {
-                    firstTime = false;
-                }
-                else
-                {
-                    builder.Append(", ");
-                }
-                builder.Append($"'{parameter.Key}': '{value}'");
+                parameterObject[parameter.Key] = value;
             }
 
-            builder.Append("}");
-            return builder.ToString();
+            return parameterObject.ToString();
         }
 
         private static string GetValueString(JToken value)
-        {
-            return GetValueStringCore(value).Replace("'", @"\'");
-        }
-
-        private static string GetValueStringCore(JToken value)
         {
             if (value.Type == JTokenType.Array)
             {
