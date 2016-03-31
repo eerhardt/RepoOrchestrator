@@ -81,6 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\WebApiConfig.cs" />
+    <Compile Include="Config.cs" />
     <Compile Include="Controllers\CommitPushedController.cs" />
     <Compile Include="Models\EventRegistration.cs" />
     <Compile Include="Global.asax.cs">

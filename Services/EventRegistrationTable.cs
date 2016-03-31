@@ -27,8 +27,7 @@ namespace RepoOrchestrator.Services
 
         private async Task InitializeSubscriptionModel()
         {
-            // TODO: get this URL from settings
-            string subscriptionsString = await s_client.GetStringAsync("https://raw.githubusercontent.com/eerhardt/versions/master/Subscriptions.json");
+            string subscriptionsString = await s_client.GetStringAsync(Config.Instance.SubscriptionsUrl);
 
             SubscriptionModel = JsonConvert.DeserializeObject<SubscriptionsModel>(subscriptionsString);
         }

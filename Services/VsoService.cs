@@ -20,7 +20,7 @@ namespace RepoOrchestrator.Services
             client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Basic",
                Convert.ToBase64String(
                    Encoding.ASCII.GetBytes(
-                       string.Format("{0}:{1}", ConfigurationManager.AppSettings["VsoUser"], ConfigurationManager.AppSettings["VsoPassword"]))));
+                       string.Format("{0}:{1}", Config.Instance.VSoUser, Config.Instance.VSoPassword))));
         }
 
         public async Task QueueBuildAsync(string instance, string project, int buildDefinitionId, string parameters)
