@@ -8,7 +8,7 @@ namespace RepoOrchestrator.Services
     {
         public static string GetParameters(IDictionary<string, JToken> vsoParameters)
         {
-            if (!vsoParameters.Any())
+            if (vsoParameters == null || !vsoParameters.Any())
             {
                 return null;
             }
