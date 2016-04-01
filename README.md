@@ -11,8 +11,8 @@ information for various .NET repos. When build information changes in the versio
 
 ## EventRegistrationTable
 
-This is implemented as an Azure Storage Table that stores all the "subscriptions" of which actions to execute when 
-upstream repo current build information is updated.
+This is implemented as a JSON file also in https://github.com/eerhardt/versions. This file stores all the "subscriptions"
+of which actions to execute when upstream repo build information is updated.
 
 ## Available actions
 
